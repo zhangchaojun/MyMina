@@ -41,7 +41,7 @@ public class ServerHandler extends IoHandlerAdapter {
 
     @Override
     public void messageReceived(IoSession session, Object message) throws Exception {
-        Log.e(TAG, "messageReceived");
+        Log.e(TAG, "messageReceived:"+message);
     }
 
     @Override

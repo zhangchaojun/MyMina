@@ -1,9 +1,12 @@
 package com.example.app2;
 
 import android.os.Bundle;
+import android.os.Handler;
 import android.support.v7.app.AppCompatActivity;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.Toast;
 
 import org.apache.mina.core.future.ConnectFuture;
 import org.apache.mina.core.service.IoConnector;
@@ -22,6 +25,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private static String host = "192.168.0.104";
     static int port = 7080;
     private Button bt_send;
+    private IoConnector connector;
+    private IoSession session = null;
+    private Handler handler = new Handler();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -29,7 +35,34 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         setContentView(R.layout.activity_main);
         initView();
 
+        new Thread() {
+            @Override
+            public void run() {
+                super.run();
 
+                if (connector == null) {
+                    connector = new NioSocketConnector();
+                    handler.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            Toast.makeText(MainActivity.this, "重新new NioSocketConnector", Toast.LENGTH_SHORT).show();
+                        }
+                    });
+                }
+                connector.getFilterChain().addLast("codec",
+                        new ProtocolCodecFilter(
+                                new TextLineCodecFactory(
+                                        Charset.forName("UTF-8"), LineDelimiter.WINDOWS.getValue(), LineDelimiter.WINDOWS.getValue())));
+                connector.setHandler(new MyClientHandler());
+                ConnectFuture future = connector.connect(new InetSocketAddress(host, port));
+                future.awaitUninterruptibly();//等待我们的连接，阻塞，就能获取到session了
+                session = future.getSession();
+                session.write("你好啊，我是客户端");
+                session.getCloseFuture().awaitUninterruptibly();//等待服务端关闭连接
+                connector.dispose();
+
+            }
+        }.start();
 
 
     }
@@ -44,30 +77,16 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     public void onClick(View v) {
         switch (v.getId()) {
             case R.id.bt_send:
+                session.write("你好啊，我是客户端");
 
-                new Thread() {
-                    @Override
-                    public void run() {
-                        super.run();
-
-                        IoSession session = null;
-                        IoConnector connector = new NioSocketConnector();
-                        connector.getFilterChain().addLast("codec",
-                                new ProtocolCodecFilter(
-                                        new TextLineCodecFactory(
-                                                Charset.forName("UTF-8"), LineDelimiter.WINDOWS.getValue(), LineDelimiter.WINDOWS.getValue())));
-                        connector.setHandler(new MyClientHandler());
-                        ConnectFuture future = connector.connect(new InetSocketAddress(host, port));
-                        future.awaitUninterruptibly();//等待我们的连接，阻塞，就能获取到session了
-                        session = future.getSession();
-                        session.write("你好啊，我是客户端");
-                        session.getCloseFuture().awaitUninterruptibly();//等待服务端关闭连接
-                        connector.dispose();
-
-                    }
-                }.start();
 
                 break;
         }
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        connector.dispose();
     }
 }

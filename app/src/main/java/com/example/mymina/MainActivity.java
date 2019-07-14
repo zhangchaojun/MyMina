@@ -52,5 +52,6 @@ public class MainActivity extends AppCompatActivity {
     protected void onDestroy() {
         super.onDestroy();
         acceptor.dispose();//销毁
+        acceptor.unbind();
     }
 }
