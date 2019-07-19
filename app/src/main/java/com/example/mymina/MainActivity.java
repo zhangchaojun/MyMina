@@ -11,6 +11,7 @@ import org.apache.mina.core.session.IdleStatus;
 import org.apache.mina.filter.codec.ProtocolCodecFilter;
 import org.apache.mina.filter.codec.textline.LineDelimiter;
 import org.apache.mina.filter.codec.textline.TextLineCodecFactory;
+import org.apache.mina.filter.logging.LoggingFilter;
 import org.apache.mina.transport.socket.nio.NioSocketAcceptor;
 
 import java.io.IOException;
@@ -32,11 +33,14 @@ public class MainActivity extends AppCompatActivity {
 
         try {
             acceptor = new NioSocketAcceptor();
+            //日志过滤器
+            acceptor.getFilterChain().addLast("logger",new LoggingFilter());
             acceptor.getFilterChain().addLast("codec",
                     new ProtocolCodecFilter(
                             new TextLineCodecFactory(
                                     Charset.forName("UTF-8"), LineDelimiter.WINDOWS.getValue(), LineDelimiter.WINDOWS.getValue())));
-            acceptor.getSessionConfig().setReadBufferSize(1024);
+            acceptor.getSessionConfig().setReadBufferSize(2048);
+            //10秒回到IDLE状态
             acceptor.getSessionConfig().setIdleTime(IdleStatus.BOTH_IDLE, 10);
             acceptor.setHandler(new ServerHandler());
             acceptor.bind(new InetSocketAddress(port));
